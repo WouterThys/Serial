@@ -1,0 +1,61 @@
+package classes;
+
+import java.util.Calendar;
+
+public class Input {
+	
+	private static final char startCharacter = '&';
+	private static final char stopCharacter = '$';
+	private static final String deviceName = "Computer";
+	private static final String messageCharacter = "[M]";
+	
+	private Calendar time;
+	private String sender;
+	private String command;
+	private String message;
+	
+	public Input(String inputMsg) {
+		time = Calendar.getInstance();
+		convert(inputMsg);
+	}
+	
+	private void convert(String inputMsg) {
+		this.sender = "A sender";
+		this.command = "A command";
+		this.message = inputMsg;
+	}
+
+	public Calendar getTime() {
+		return time;
+	}
+
+	public void setTime(Calendar time) {
+		this.time = time;
+	}
+
+	public String getSender() {
+		return sender;
+	}
+
+	public void setSender(String sender) {
+		this.sender = sender;
+	}
+
+	public String getCommand() {
+		return command;
+	}
+
+	public void setCommand(String command) {
+		this.command = command;
+	}
+
+	public String getMessage() {
+		return message;
+	}
+
+	public void setMessage(String message) {
+		this.message = message;
+	}
+
+	
+}

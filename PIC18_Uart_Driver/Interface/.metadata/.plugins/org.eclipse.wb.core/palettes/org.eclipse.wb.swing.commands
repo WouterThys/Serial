@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<commands>
+	<addCategory
+		id="category_1477162653104"
+		name="Custom"
+		description="Container for custom components"
+		visible="true"
+		open="true"/>
+	<addComponent
+		id="custom_1477162653104"
+		name="SpinnerListModel"
+		description="Creates javax.swing.SpinnerListModel component."
+		visible="true"
+		class="javax.swing.SpinnerListModel"
+		category="category_1477162653104"/>
+</commands>

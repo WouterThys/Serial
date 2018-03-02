@@ -1,0 +1,4 @@
+
+public interface SerialUartInterface {
+	void onConnectedListener();
+}

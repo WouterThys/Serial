@@ -1,0 +1,391 @@
+import java.awt.Component;
+import java.awt.EventQueue;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerListModel;
+import javax.swing.JButton;
+import javax.swing.ImageIcon;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumnModel;
+
+import classes.Message;
+
+import javax.swing.JTextField;
+
+import java.awt.Color;
+
+
+public class InterfaceFrame implements SerialUartInterface {
+
+	private JFrame frmUartInterface;
+	
+	private SimpleDateFormat dateFormat = new SimpleDateFormat("hh:mm");
+	
+	private static JSpinner spnrPortSelect;
+	private static SpinnerListModel spnrPorts;
+	private String[] portStrings;
+
+	private static JSpinner spnrBaudSelect;
+	private static SpinnerListModel spnrBaudRates;
+	private String[] baudStrings = {"4800", "9600", "19200", "38400", "57600", "115200"};
+	
+	private JLabel connectedLed;
+	private JLabel writeLed;
+	private ImageIcon redLedImg;
+	private ImageIcon greenLedImg;
+	private ImageIcon blueLedImg;
+	private ImageIcon trashImg;
+	
+	private JButton btnConnect;
+	private JTable tblInput;
+	private JTable tblOutput;
+	
+	private DefaultTableModel tblModelInput;
+	private DefaultTableModel tblModelOutput;
+	private JTextField commandTf;
+	private JTextField messageTf;
+	private JTextField errorTf;
+	
+	private int sendId = 0;
+	
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					InterfaceFrame window = new InterfaceFrame();
+					window.frmUartInterface.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+	//sudo rm -f LCK*
+
+	/**
+	 * Create the application.
+	 */
+	public InterfaceFrame() {
+		initialize();
+	}
+	
+	@Override
+	public void onConnectedListener() {
+		connectedLed.setIcon(greenLedImg);
+	}
+	@Override
+	public void onDisconnectedListener() {
+		connectedLed.setIcon(redLedImg);
+	}
+	
+	@Override
+	public void onWriteSuccesListener() {
+		writeLed.setIcon(blueLedImg);
+	}
+
+	@Override
+	public void onWriteFailedListener(String error) {
+		errorTf.setText("Write failed: "+error);
+	}
+	
+	@Override
+	public void onDataReadyListener(String input) {
+		Message newMessage = new Message(input);
+		switch(newMessage.getMessageType()) {
+		case Message.MES_MESSAGE:
+			// Add row to table
+			DefaultTableModel dtm = (DefaultTableModel) tblInput.getModel();
+			
+			dtm.addRow(new Object[]{
+					dateFormat.format(newMessage.getTime().getTime()),
+					newMessage.getSender(),
+					newMessage.getCommand(),
+					newMessage.getMessage()});
+			resizeTable(tblInput);
+			tblInput.scrollRectToVisible(tblInput.getCellRect(tblInput.getRowCount()-1, 0, true));
+			break;
+			
+		case Message.MES_ACK:
+			// Acknowledge for send message
+			if(Integer.valueOf(newMessage.getMessage()) == (sendId-1)) {
+				writeLed.setIcon(greenLedImg);
+			} else {
+				writeLed.setIcon(redLedImg);
+			}
+			break;
+		}
+	}
+	
+	private void loadImages() {
+		redLedImg = createImageIcon("redled.png");
+		greenLedImg = createImageIcon("greenled.png");
+		blueLedImg = createImageIcon("blueled.png");
+		trashImg = createImageIcon("trash.png");
+	}
+
+	/**
+	 * Initialize the contents of the frame.
+	 */
+	private void initialize() {
+		frmUartInterface = new JFrame();
+		frmUartInterface.setTitle("Uart interface");
+		frmUartInterface.setBounds(100, 100, 499, 664);
+		frmUartInterface.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frmUartInterface.getContentPane().setLayout(null);
+		
+		JLabel lblNewLabel = new JLabel("Input");
+		lblNewLabel.setBounds(12, 55, 70, 15);
+		frmUartInterface.getContentPane().add(lblNewLabel);
+		
+		JLabel lblComPort = new JLabel("Com port");
+		lblComPort.setBounds(30, 12, 70, 15);
+		frmUartInterface.getContentPane().add(lblComPort);
+		
+		JLabel lblBaud = new JLabel("Baud");
+		lblBaud.setBounds(152, 12, 70, 15);
+		frmUartInterface.getContentPane().add(lblBaud);
+		
+		
+		// Com port spinner
+		ArrayList<String> ports = SerialInterface.listPorts();
+		portStrings = new String[ports.size()];
+		for(int i=0; i<ports.size(); i++) {
+			portStrings[i] = ports.get(i);
+		}
+		
+		spnrPorts = new SpinnerListModel(portStrings);
+		spnrPortSelect = new JSpinner(spnrPorts);
+		spnrPortSelect.setBounds(12, 28, 88, 20);
+		frmUartInterface.getContentPane().add(spnrPortSelect);
+		
+		// Baud rate spinner
+		spnrBaudRates = new SpinnerListModel(baudStrings);
+		spnrBaudSelect = new JSpinner(spnrBaudRates);
+		spnrBaudSelect.setBounds(112, 28, 78, 20);
+		spnrBaudSelect.setValue("9600");
+		frmUartInterface.getContentPane().add(spnrBaudSelect);
+		
+		// Connect button
+		btnConnect = new JButton("Connect");
+		btnConnect.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(!SerialInterface.isConnected()) {
+					SerialInterface.startSerialInterface(
+							(String)spnrPortSelect.getValue(), 
+							Integer.valueOf(spnrBaudSelect.getValue().toString()),
+							InterfaceFrame.this
+							);
+					btnConnect.setText("Disconnect");
+				} else {
+					SerialInterface.stopSerialInterface();
+					btnConnect.setText("Connect");
+				}
+			}
+		});
+		btnConnect.setBounds(202, 25, 154, 25);
+		frmUartInterface.getContentPane().add(btnConnect);
+		
+		// Image
+		connectedLed = new JLabel("");
+		connectedLed.setBounds(407, 21, 30, 30);
+		frmUartInterface.getContentPane().add(connectedLed);
+		loadImages();
+		connectedLed.setIcon(redLedImg);
+		
+		// Table input
+		String[] header = {"Time", "Sender", "Command", "Message"};
+		String[][] data = {{"","","",""}};
+		tblModelInput = new DefaultTableModel(data, header);
+		tblModelInput.getDataVector().removeAllElements();
+		tblModelInput.fireTableDataChanged();
+		tblInput = new JTable(tblModelInput);
+		tblInput.setEnabled(false);
+		tblInput.setShowHorizontalLines(false);
+		tblInput.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+		tblInput.setBounds(12, 69, 424, 241);
+		frmUartInterface.getContentPane().add(tblInput);
+		JScrollPane jp=new JScrollPane(tblInput);
+	    jp.setBounds(12, 69, 424, 241);
+	    jp.setVisible(true);
+	    frmUartInterface.getContentPane().add(jp);
+	    
+	    JButton btnX = new JButton("");
+	    btnX.addActionListener(new ActionListener() {
+	    	public void actionPerformed(ActionEvent arg0) {
+	    		tblModelInput.getDataVector().removeAllElements();
+	    		tblModelInput.fireTableDataChanged();
+	    	}
+	    });
+	    btnX.setBounds(443, 69, 40, 35);
+	    btnX.setIcon(trashImg);
+	    frmUartInterface.getContentPane().add(btnX);
+	    
+	    // Table output
+	    tblModelOutput = new DefaultTableModel(data, header);
+	    tblModelOutput.getDataVector().removeAllElements();
+		tblModelOutput.fireTableDataChanged();
+	    tblOutput = new JTable(tblModelOutput);
+	    tblOutput.setEnabled(false);
+	    tblOutput.setShowHorizontalLines(false);
+	    tblOutput.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+	    tblOutput.setBounds(12, 360, 424, 122);
+	    frmUartInterface.getContentPane().add(tblOutput);
+	    JScrollPane jp2=new JScrollPane(tblOutput);
+	    jp2.setBounds(12, 360, 424, 122);
+	    jp2.setVisible(true);
+	    frmUartInterface.getContentPane().add(jp2);
+	    
+	    JButton button = new JButton("");
+	    button.addActionListener(new ActionListener() {
+	    	public void actionPerformed(ActionEvent arg0) {
+	    		tblModelOutput.getDataVector().removeAllElements();
+	    		tblModelOutput.fireTableDataChanged();
+	    	}
+	    });
+	    button.setBounds(443, 360, 40, 35);
+	    button.setIcon(trashImg);
+	    frmUartInterface.getContentPane().add(button);
+	    
+	    commandTf = new JTextField();
+	    commandTf.setBounds(12, 510, 172, 27);
+	    frmUartInterface.getContentPane().add(commandTf);
+	    commandTf.setColumns(10);
+	    
+	    messageTf = new JTextField();
+	    messageTf.setBounds(202, 510, 234, 27);
+	    frmUartInterface.getContentPane().add(messageTf);
+	    messageTf.setColumns(10);
+	    
+	    JLabel lblCommand = new JLabel("Command");
+	    lblCommand.setBounds(12, 494, 168, 15);
+	    frmUartInterface.getContentPane().add(lblCommand);
+	    
+	    JLabel lblMessage = new JLabel("  Message");
+	    lblMessage.setBounds(202, 494, 234, 15);
+	    frmUartInterface.getContentPane().add(lblMessage);
+	    
+	    JButton btnSend = new JButton("Send");
+	    btnSend.addActionListener(new ActionListener() {
+	    	public void actionPerformed(ActionEvent arg0) {
+	    		if (SerialInterface.isReadyToSend()) {
+		    		// Add row to table
+		    		Message newMessage = new Message(commandTf.getText().toString(), messageTf.getText().toString());
+		    		DefaultTableModel dtm = (DefaultTableModel) tblOutput.getModel();
+		    		
+		    		SerialInterface.writeData(newMessage.construct(sendId).getBytes());
+		    		sendId++;
+		    		if (sendId > 9) sendId = 0;
+		    		
+		    		dtm.addRow(new Object[]{
+		    				dateFormat.format(newMessage.getTime().getTime()),
+		    				newMessage.getSender(),
+		    				newMessage.getCommand(),
+		    				newMessage.getMessage()});
+		    		resizeTable(tblOutput);
+		    		tblOutput.scrollRectToVisible(tblOutput.getCellRect(tblOutput.getRowCount()-1, 0, true));
+	    		} else {
+	    			errorTf.setText("Not ready to send data, are you connected?");
+	    			errorTf.setForeground(Color.RED);
+	    		}
+	    	}
+	    });
+	    btnSend.setBounds(336, 537, 100, 27);
+	    frmUartInterface.getContentPane().add(btnSend);
+	    
+	    JLabel lblOutput = new JLabel("Output");
+	    lblOutput.setBounds(12, 343, 60, 15);
+	    frmUartInterface.getContentPane().add(lblOutput);
+	    
+	    errorTf = new JTextField();
+	    errorTf.setForeground(Color.RED);
+	    //errorTf.setEnabled(false);
+	    errorTf.setEditable(false);
+	    errorTf.setBounds(12, 604, 424, 27);
+	    frmUartInterface.getContentPane().add(errorTf);
+	    errorTf.setColumns(10);
+	    
+	    JLabel lblErrors = new JLabel("Errors");
+	    lblErrors.setBounds(12, 588, 60, 15);
+	    frmUartInterface.getContentPane().add(lblErrors);
+	    
+	    JButton button_1 = new JButton("");
+	    button_1.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				errorTf.setText("");
+			}
+		});
+	    button_1.setBounds(443, 596, 40, 35);
+	    button_1.setIcon(trashImg);
+	    frmUartInterface.getContentPane().add(button_1);
+	    
+	    writeLed = new JLabel("");
+	    writeLed.setBounds(443, 537, 30, 30);
+	    frmUartInterface.getContentPane().add(writeLed);
+	    writeLed.setIcon(redLedImg);
+	   
+	}
+	
+	private void resizeTable(JTable table) {
+		final TableColumnModel columnModel = table.getColumnModel();
+		for (int col = 0; col < table.getColumnCount(); col++) {
+			int width = 15; //Min width
+			for (int row = 0; row < table.getRowCount(); row++) {
+				TableCellRenderer renderer = table.getCellRenderer(row, col);
+				Component comp = table.prepareRenderer(renderer, row, col);
+				width = Math.max(comp.getPreferredSize().width+1, width);
+			}
+			if (width > 300) {
+				width = 300;
+			}
+			columnModel.getColumn(col).setPreferredWidth(width);
+		}
+	}
+	
+//	private static BufferedImage resizeImage(BufferedImage img, int newW, int newH) {
+//		Image tmp = img.getScaledInstance(newW, newH, Image.SCALE_SMOOTH);
+//		BufferedImage dimg = new BufferedImage(newW, newH, BufferedImage.TYPE_INT_ARGB_PRE);
+//		
+//		Graphics2D g2d = dimg.createGraphics();
+//		g2d.drawImage(tmp,0,0,null);
+//		g2d.dispose();
+//		
+//		return dimg;
+//	}
+	
+	private Image getScaledImage(Image srcImg, int w, int h){
+	    BufferedImage resizedImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB_PRE);
+	    Graphics2D g2 = resizedImg.createGraphics();
+
+	    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+	    g2.drawImage(srcImg, 0, 0, w, h, null);
+	    g2.dispose();
+
+	    return resizedImg;
+	}
+	
+	protected ImageIcon createImageIcon(String path) {
+		java.net.URL imageUrl = getClass().getResource(path);
+		if (imageUrl != null) {
+			ImageIcon icon = new ImageIcon(imageUrl);
+			return new ImageIcon(getScaledImage(icon.getImage(), 30, 30));
+		}
+		return null;
+	}
+}

@@ -1,0 +1,14 @@
+import java.io.InputStream;
+import java.io.OutputStream;
+import gnu.io.SerialPort;
+
+public class SerialInterface {
+	
+	private int baud;
+	
+	private static InputStream inputStream;
+	private static OutputStream outputStream;
+	private SerialPort serialPort;
+	
+
+}

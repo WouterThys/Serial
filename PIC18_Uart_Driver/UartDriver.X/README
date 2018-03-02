@@ -1,0 +1,30 @@
+
+                               UART DRIVER
+  
+  Description
+  -----------
+  
+  
+  Resources
+  ---------
+  
+  
+  Get it started
+  --------------
+  
+  1. Define in the main project the crystal frequency (_XTAL_FREQ)
+       for example: '#define _XTAL_FREQ 20000000' to set the frequency to 20MHz
+  
+  2. Make sure there is a .h file named 'PORT_Driver.h' mapping the UART ports
+       to the correct pins of the PIC. The file should contain the following
+       defines:
+           * #define UART_TX         PORTCbits.RC7
+           * #define UART_RX         PORTCbits.RC6
+           * #define UART_TX_Dir     TRISCbits.TRISC7
+           * #define UART_RX_Dir     TRISCbits.TRISC6
+
+  3. Initialize the Uart module, if reading is needed, enable interrupts.
+  
+  
+  
+ 

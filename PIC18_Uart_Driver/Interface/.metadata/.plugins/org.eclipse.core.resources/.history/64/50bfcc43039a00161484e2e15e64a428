@@ -1,0 +1,13 @@
+
+public class SerialConverter {
+	
+	public SerialConverter() {
+		
+	}
+	
+	
+	public void convertInput(String input) {
+		
+	}
+
+}
