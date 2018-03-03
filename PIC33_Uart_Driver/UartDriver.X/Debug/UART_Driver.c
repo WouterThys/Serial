@@ -67,6 +67,9 @@ static uint8_t bufferCnt = 0;
 static uint8_t blockLength = 0;
 static uint8_t dummy;
 
+static uint8_t commandCnt;
+static uint8_t messageCnt;
+
 
 /*******************************************************************************
  *          LOCAL FUNCTIONS
@@ -79,10 +82,12 @@ static void (*readDone)(UartData_t data);
 
 #ifdef TYPE_TEXT
 void fillDataBuffer(uint8_t data) {
-    if (data == '\0') {
-        
+    readData.message[messageCnt] = (char)data;
+    if ((data == '\0') || (messageCnt > MESSAGE_LENGTH)) {
+        messageCnt = 0;
+        (*readDone)(readData);
     } else {
-        
+        messageCnt++;
     }
 }
 #endif
@@ -200,7 +205,7 @@ void acknowledge(uint8_t ackId) {
 /*******************************************************************************
  *          DRIVER FUNCTIONS
  ******************************************************************************/
-void D_UART_Init(uint16_t baud, void (*onReadDone)(UartData_t data)) {
+void uartInit(uint16_t baud, void (*onReadDone)(UartData_t data)) {
     
     readDone = onReadDone;
     
@@ -247,9 +252,10 @@ void D_UART_Init(uint16_t baud, void (*onReadDone)(UartData_t data)) {
     // Mapping
     RPINR18bits.U1RXR = UART1_RX_Map;
     RPOR2bits.RP39R = UART1_TX_Map;
+    
 }
 
-void D_UART_Enable(bool enable) {
+void uartEnable(bool enable) {
     if(enable) {
         U1MODEbits.UARTEN = 1; // UARTx is enabled
         U1STAbits.UTXEN = 1; 
@@ -329,10 +335,9 @@ void __attribute__ ( (interrupt, no_auto_psv) ) _U1RXInterrupt(void) {
             return;
         } 
         if(U1STAbits.OERR == 1) {
-            D_UART_Enable(false);
+            uartEnable(false);
             DelayUs(10);
-            D_UART_Enable(true);
-            LED2 = 1;
+            uartEnable(true);
             return;
         } 
         

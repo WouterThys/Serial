@@ -48,6 +48,12 @@ void initialize() {
  *          VARIABLES
  ******************************************************************************/
 
+void onReadDone(UartData_t data) {
+    LED1 = !LED1;
+    
+    printf(data.message);
+}
+
 /*******************************************************************************
  *          MAIN PROGRAM
  ******************************************************************************/
@@ -57,10 +63,12 @@ int main(void) {
     initialize();
     
     
-    uartInit(UART_MODULE_1, UART1_BAUD);
-    uartEnable(UART_MODULE_1, true);
+    uartInit(UART1_BAUD, &onReadDone);
+    uartEnable(true);
     
-    DelayMs(1000);
+    DelayMs(100);
+    
+    printf("start");
     
     while(1) {
     

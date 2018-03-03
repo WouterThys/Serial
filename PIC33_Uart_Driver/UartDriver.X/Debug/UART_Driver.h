@@ -6,16 +6,16 @@
 //#define TYPE_SIMPLE_LONG
 //#define TYPE_VARIABLE
 
-/**
- * Data Struct for reading data.
- */
+#ifdef TYPE_TEXT
+#define COMMAND_LENGTH 0
+#define MESSAGE_LENGTH 100
+#endif
 
 typedef struct {
     uint8_t sender; // Sender id
-    char * command; // Command
-    char * message; // Message
     uint8_t ack;    // Acknowledge
-    uint8_t length; // Data length
+    char command[COMMAND_LENGTH]; // Command
+    char message[MESSAGE_LENGTH]; // Message
 } UartData_t;
 
 
